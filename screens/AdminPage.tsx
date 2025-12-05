@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -10,6 +11,7 @@ import {
     Text,
     TouchableOpacity,
     View,
+    Alert
 } from 'react-native';
 
 interface ItemType {
@@ -18,7 +20,6 @@ interface ItemType {
     status: boolean,
 }
 
-// Mock Data
 const MOCK_ITEMS: ItemType[] = Array.from({ length: 15 }, (_, i) => ({
     id: i.toString(),
     title: `System Log Entry #${i + 1}`,
@@ -30,6 +31,9 @@ export default function AdminScreen() {
     const [userName, setUserName] = useState("Admin");
     const [items, setItems] = useState<ItemType[]>(MOCK_ITEMS);
 
+    // 1. STATE: Track which item is currently expanded (showing the menu)
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+
     useEffect(() => {
         const loadUser = async () => {
             const name = await AsyncStorage.getItem('userName');
@@ -38,16 +42,38 @@ export default function AdminScreen() {
         loadUser();
     }, []);
 
-    // LOGIC CHANGE: Toggle status directly when clicking the row
-    const handleItemPress = (id: string) => {
-        setItems(prevItems => {
-            return prevItems.map(item => {
-                if (item.id === id) {
-                    return { ...item, status: !item.status };
+    // 2. TOGGLE MENU: Opens the clicked row, closes others
+    const handleExpandToggle = (id: string) => {
+        setExpandedId(prev => prev === id ? null : id);
+    };
+
+    // ACTION: Toggle Status (The logic you had before)
+    const handleToggleStatus = (id: string) => {
+        setItems(prevItems => prevItems.map(item => {
+            if (item.id === id) return { ...item, status: !item.status };
+            return item;
+        }));
+    };
+
+    // ACTION: Delete Logic
+    const handleDelete = (id: string) => {
+        Alert.alert("Delete Item", `Are you sure you want to delete item ${id}?`, [
+            { text: "Cancel", style: "cancel" },
+            { 
+                text: "Delete", 
+                style: "destructive", 
+                onPress: () => {
+                    setItems(prev => prev.filter(item => item.id !== id));
+                    setExpandedId(null); // Close menu after delete
                 }
-                return item;
-            });
-        });
+            }
+        ]);
+    };
+
+    // ACTION: Edit Logic
+    const handleEdit = (id: string) => {
+        Alert.alert("Edit Mode", `Opening edit screen for ID: ${id}`);
+        // router.push(`/admin/edit/${id}`);
     };
 
     const handleLogout = () => {
@@ -55,22 +81,56 @@ export default function AdminScreen() {
         router.replace('/(auth)/login');
     };
 
-    const renderItem = ({ item }: { item: ItemType }) => (
-        <TouchableOpacity
-            style={styles.itemRow}
-            onPress={() => handleItemPress(item.id)}
-        >
-            <Text style={styles.itemText}>{item.title}</Text>
-            
-            {/* Status Badge */}
-            <View style={[
-                styles.statusBadge,
-                { backgroundColor: item.status ? '#4caf50' : '#e74c3c' }
-            ]}>
-                <Text style={styles.statusText}>{item.status ? "OK" : "OFF"}</Text>
+    const renderItem = ({ item }: { item: ItemType }) => {
+        const isExpanded = expandedId === item.id;
+
+        return (
+            <View style={styles.itemContainer}>
+                {/* === THE MAIN ROW === */}
+                <TouchableOpacity
+                    style={[
+                        styles.itemRow,
+                        isExpanded && styles.itemRowActive // Change color if open
+                    ]}
+                    onPress={() => handleExpandToggle(item.id)}
+                    activeOpacity={0.7}
+                >
+                    <Text style={styles.itemText}>{item.title}</Text>
+                    
+                    {/* Status Badge - Clicking this toggles status directly */}
+                    <TouchableOpacity onPress={() => handleToggleStatus(item.id)}>
+                        <View style={[
+                            styles.statusBadge,
+                            { backgroundColor: item.status ? '#4caf50' : '#e74c3c' }
+                        ]}>
+                            <Text style={styles.statusText}>{item.status ? "OK" : "OFF"}</Text>
+                        </View>
+                    </TouchableOpacity>
+                </TouchableOpacity>
+
+                {/* === THE DROPDOWN MENU (Conditionally Rendered) === */}
+                {isExpanded && (
+                    <View style={styles.dropdownMenu}>
+                        
+                        {/* Edit Button */}
+                        <TouchableOpacity style={styles.actionButton} onPress={() => handleEdit(item.id)}>
+                            <Ionicons name="create-outline" size={20} color="#2f95dc" />
+                            <Text style={[styles.actionText, { color: '#2f95dc' }]}>Edit</Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.divider} />
+
+                        {/* Delete Button */}
+                        <TouchableOpacity style={styles.actionButton} onPress={() => handleDelete(item.id)}>
+                            <Ionicons name="trash-outline" size={20} color="#e74c3c" />
+                            <Text style={[styles.actionText, { color: '#e74c3c' }]}>Delete</Text>
+                        </TouchableOpacity>
+
+                    </View>
+                )}
             </View>
-        </TouchableOpacity>
-    );
+        );
+    };
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -92,8 +152,6 @@ export default function AdminScreen() {
 
                 {/* === MAIN CONTENT === */}
                 <View style={styles.content}>
-                    
-                    {/* List Container - Now fills the screen */}
                     <View style={styles.listContainer}>
                         <Text style={styles.listHeader}>All System Logs</Text>
                         <FlatList
@@ -104,7 +162,6 @@ export default function AdminScreen() {
                             contentContainerStyle={{ paddingBottom: 20 }}
                         />
                     </View>
-
                 </View>
 
             </View>
@@ -138,7 +195,7 @@ const styles = StyleSheet.create({
     avatar: {
         width: 35,
         height: 35,
-        backgroundColor: '#333', // Darker avatar for Admin
+        backgroundColor: '#333',
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
@@ -161,12 +218,11 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         justifyContent: 'flex-start',
-        // Removed alignItems: 'center' so list stretches to full width
     },
 
-    // --- LIST STYLES ---
+    // --- LIST & ITEM STYLES ---
     listContainer: {
-        flex: 1, // <--- CHANGED: Uses full remaining height
+        flex: 1,
         width: '100%',
         backgroundColor: '#f9f9f9',
         borderRadius: 12,
@@ -183,13 +239,22 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
+    itemContainer: {
+        marginBottom: 0, 
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
     itemRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 15, // Slightly taller rows for admin
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        paddingVertical: 15,
+        paddingHorizontal: 10,
+    },
+    itemRowActive: {
+        backgroundColor: '#e6f0fa', // Light blue when open
+        borderTopLeftRadius: 8,
+        borderTopRightRadius: 8,
     },
     itemText: {
         fontSize: 16,
@@ -207,4 +272,40 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
     },
+    
+    // --- DROPDOWN MENU STYLES ---
+    dropdownMenu: {
+        flexDirection: 'row',
+        backgroundColor: '#f1f1f1',
+        padding: 10,
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        borderBottomLeftRadius: 8,
+        borderBottomRightRadius: 8,
+    },
+    actionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+        borderRadius: 5,
+        backgroundColor: 'white',
+        flex: 1, // Share space equally
+        justifyContent: 'center',
+        marginHorizontal: 5,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 1,
+    },
+    actionText: {
+        fontWeight: '600',
+        marginLeft: 5,
+    },
+    divider: {
+        width: 1,
+        height: '80%',
+        backgroundColor: '#ddd',
+        marginHorizontal: 5,
+    }
 });
