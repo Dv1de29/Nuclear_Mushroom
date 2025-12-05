@@ -13,6 +13,7 @@ import {
     View,
 } from 'react-native';
 
+
 interface ItemType {
     id: string,
     title: string,

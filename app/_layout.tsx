@@ -62,6 +62,8 @@ import 'react-native-reanimated';
         <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name='(auth)/login' options={{ headerShown: false }} />
+            <Stack.Screen name='edit/[id]' options={{ headerShown: false, presentation: 'modal', title: "Edit item"}} />
+            <Stack.Screen name='add' options={{headerShown: false, presentation: 'modal', title: "Add Item"}} />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
         </ThemeProvider>

@@ -1,0 +1,67 @@
+[
+  {
+    "id": "1",
+    "name": "US East Standard",
+    "location": "New York, USA",
+    "ipAddress": "104.23.11.5",
+    "port": 1194,
+    "protocol": "OpenVPN",
+    "transportLayer": "UDP",
+    "authType": "password",
+    "authValue": "UserPass123!",
+    "obfuscation": false,
+    "status": "disconnected"
+  },
+  {
+    "id": "2",
+    "name": "Germany Streaming",
+    "location": "Frankfurt, DE",
+    "ipAddress": "185.12.99.201",
+    "port": 443,
+    "protocol": "WireGuard",
+    "transportLayer": "UDP",
+    "authType": "uuid",
+    "authValue": "550e8400-e29b-41d4-a716-446655440000",
+    "obfuscation": false,
+    "status": "connected"
+  },
+  {
+    "id": "3",
+    "name": "Romania Secure Core",
+    "location": "Bucharest, RO",
+    "ipAddress": "89.100.22.4",
+    "port": 8080,
+    "protocol": "Shadowsocks",
+    "transportLayer": "TCP",
+    "authType": "certificate",
+    "authValue": "-----BEGIN CERTIFICATE-----MIIDlzCCRn+gAwIBAgIE...",
+    "obfuscation": true,
+    "status": "disconnected"
+  },
+  {
+    "id": "4",
+    "name": "Singapore Stealth",
+    "location": "Singapore, SG",
+    "ipAddress": "202.14.55.88",
+    "port": 22,
+    "protocol": "SSH Tunnel",
+    "transportLayer": "TCP",
+    "authType": "password",
+    "authValue": "SecureShellPass",
+    "obfuscation": true,
+    "status": "error"
+  },
+  {
+    "id": "5",
+    "name": "UK Low Latency",
+    "location": "London, UK",
+    "ipAddress": "51.15.20.10",
+    "port": 51820,
+    "protocol": "IKEv2",
+    "transportLayer": "UDP",
+    "authType": "uuid",
+    "authValue": "a2c3d4e5-f6g7-8h9i-0j1k-2l3m4n5o6p7q",
+    "obfuscation": false,
+    "status": "disconnected"
+  }
+]

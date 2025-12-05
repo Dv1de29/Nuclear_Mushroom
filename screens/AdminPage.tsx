@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+    Alert,
     FlatList,
     Platform,
     SafeAreaView,
@@ -10,8 +11,7 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
-    Alert
+    View
 } from 'react-native';
 
 interface ItemType {
@@ -64,7 +64,7 @@ export default function AdminScreen() {
                 style: "destructive", 
                 onPress: () => {
                     setItems(prev => prev.filter(item => item.id !== id));
-                    setExpandedId(null); // Close menu after delete
+                    setExpandedId(null);
                 }
             }
         ]);
@@ -72,9 +72,13 @@ export default function AdminScreen() {
 
     // ACTION: Edit Logic
     const handleEdit = (id: string) => {
-        Alert.alert("Edit Mode", `Opening edit screen for ID: ${id}`);
-        // router.push(`/admin/edit/${id}`);
+        // Alert.alert("Edit Mode", `Opening edit screen for ID: ${id}`);
+        router.push(`/edit/${id}`)
     };
+
+    const handleAdd = () => {
+        router.push('/add')
+    }
 
     const handleLogout = () => {
         AsyncStorage.clear();
@@ -98,14 +102,14 @@ export default function AdminScreen() {
                     <Text style={styles.itemText}>{item.title}</Text>
                     
                     {/* Status Badge - Clicking this toggles status directly */}
-                    <TouchableOpacity onPress={() => handleToggleStatus(item.id)}>
+                    {/* <TouchableOpacity onPress={() => handleToggleStatus(item.id)}>
                         <View style={[
                             styles.statusBadge,
                             { backgroundColor: item.status ? '#4caf50' : '#e74c3c' }
                         ]}>
                             <Text style={styles.statusText}>{item.status ? "OK" : "OFF"}</Text>
                         </View>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                 </TouchableOpacity>
 
                 {/* === THE DROPDOWN MENU (Conditionally Rendered) === */}
@@ -162,6 +166,10 @@ export default function AdminScreen() {
                             contentContainerStyle={{ paddingBottom: 20 }}
                         />
                     </View>
+                    <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
+                        <Ionicons name="add" size={24} color="white" />
+                        <Text style={styles.addButtonText}>Add New Log</Text>
+                    </TouchableOpacity>
                 </View>
 
             </View>
@@ -307,5 +315,29 @@ const styles = StyleSheet.create({
         height: '80%',
         backgroundColor: '#ddd',
         marginHorizontal: 5,
+    },
+    addButton: {
+        backgroundColor: '#2f95dc',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 15,
+        borderRadius: 30, // Rounded corners (pill shape)
+        width: '60%',     // Occupy 80% of width
+        alignSelf: 'center', // <--- THIS CENTERS IT HORIZONTALLY
+        marginBottom: 20, // Space from bottom
+        
+        // Shadow (makes it pop)
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+    },
+    addButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 15,
+        marginLeft: 8, // Space between icon and text
     }
 });
