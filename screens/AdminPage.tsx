@@ -1,7 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     FlatList,
     Platform,
@@ -19,23 +18,17 @@ interface ItemType {
     status: boolean,
 }
 
+// Mock Data
 const MOCK_ITEMS: ItemType[] = Array.from({ length: 15 }, (_, i) => ({
     id: i.toString(),
     title: `System Log Entry #${i + 1}`,
     status: false
 }));
 
-export default function HomePage() {
+export default function AdminScreen() {
     const router = useRouter();
-    const [userName, setUserName] = useState("Guest");
-    const [items, setItems] = useState<ItemType[]>(MOCK_ITEMS)
-    const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
-
-    // Removed the useRef since we don't need it with the new logic
-
-    const selectedItem = useMemo(() => {
-        return items.find(item => item.id === selectedItemId)
-    }, [items, selectedItemId]) // Added 'items' to dependency array so it updates when status changes
+    const [userName, setUserName] = useState("Admin");
+    const [items, setItems] = useState<ItemType[]>(MOCK_ITEMS);
 
     useEffect(() => {
         const loadUser = async () => {
@@ -45,40 +38,31 @@ export default function HomePage() {
         loadUser();
     }, []);
 
-    const handleBigButtonPress = () => {
-        if (!selectedItemId) return;
-
+    // LOGIC CHANGE: Toggle status directly when clicking the row
+    const handleItemPress = (id: string) => {
         setItems(prevItems => {
             return prevItems.map(item => {
-                // Logic: If selected, toggle it. If not selected, turn it off.
-                if (item.id === selectedItemId) {
+                if (item.id === id) {
                     return { ...item, status: !item.status };
                 }
-                // Force everyone else to false
-                return { ...item, status: false };
-            })
-        })
+                return item;
+            });
+        });
     };
 
-    const handleLoginLink = () => {
-        AsyncStorage.clear()
+    const handleLogout = () => {
+        AsyncStorage.clear();
         router.replace('/(auth)/login');
-    };
-
-    const handleItemPress = (item: ItemType) => {
-        setSelectedItemId(item.id);
     };
 
     const renderItem = ({ item }: { item: ItemType }) => (
         <TouchableOpacity
-            style={[
-                styles.itemRow,
-                // Highlight the selected row slightly
-                item.id === selectedItemId && { backgroundColor: '#f0f8ff' }
-            ]}
-            onPress={() => { handleItemPress(item) }}
+            style={styles.itemRow}
+            onPress={() => handleItemPress(item.id)}
         >
             <Text style={styles.itemText}>{item.title}</Text>
+            
+            {/* Status Badge */}
             <View style={[
                 styles.statusBadge,
                 { backgroundColor: item.status ? '#4caf50' : '#e74c3c' }
@@ -98,46 +82,28 @@ export default function HomePage() {
                         <View style={styles.avatar}>
                             <Text style={styles.avatarText}>{userName.charAt(0).toUpperCase()}</Text>
                         </View>
-                        <Text style={styles.userName}>Hello, {userName}</Text>
+                        <Text style={styles.userName}>{userName} Panel</Text>
                     </View>
 
-                    <TouchableOpacity onPress={handleLoginLink}>
-                        <Text style={styles.loginLink}>{userName !== "Guest" ? "Log out" : "Log In"}</Text>
+                    <TouchableOpacity onPress={handleLogout}>
+                        <Text style={styles.loginLink}>Log out</Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* === MAIN CONTENT === */}
                 <View style={styles.content}>
-
-                    {/* === LIST SECTION === */}
+                    
+                    {/* List Container - Now fills the screen */}
                     <View style={styles.listContainer}>
-                        <Text style={styles.listHeader}>Recent Activity</Text>
+                        <Text style={styles.listHeader}>All System Logs</Text>
                         <FlatList
                             data={items}
                             renderItem={renderItem}
                             keyExtractor={item => item.id}
                             showsVerticalScrollIndicator={true}
-                            contentContainerStyle={{ paddingBottom: 10 }}
+                            contentContainerStyle={{ paddingBottom: 20 }}
                         />
                     </View>
-
-                    {/* Big Blue Button */}
-                    {selectedItem && <>
-                        <TouchableOpacity
-                            style={[
-                                styles.bigBlueButton,
-                                { backgroundColor: selectedItem.status ? '#2f95dc' : '#e74c3c' }
-                            ]}
-                            onPress={handleBigButtonPress}
-                            activeOpacity={0.7}
-                        >
-                            <Ionicons name={selectedItem.status ? "rocket" : "rocket-outline"} size={40} color="white" />
-                        </TouchableOpacity>
-
-                        <Text style={styles.helperText}>
-                            {`Server is ${selectedItem.status ? "ON" : "OFF"}`}
-                        </Text>
-                    </>}
 
                 </View>
 
@@ -172,7 +138,7 @@ const styles = StyleSheet.create({
     avatar: {
         width: 35,
         height: 35,
-        backgroundColor: '#eee',
+        backgroundColor: '#333', // Darker avatar for Admin
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
@@ -180,7 +146,7 @@ const styles = StyleSheet.create({
     },
     avatarText: {
         fontWeight: 'bold',
-        color: '#666',
+        color: '#fff',
     },
     userName: {
         fontSize: 16,
@@ -195,18 +161,17 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         justifyContent: 'flex-start',
-        alignItems: 'center',
-        paddingBottom: 40,
+        // Removed alignItems: 'center' so list stretches to full width
     },
 
     // --- LIST STYLES ---
     listContainer: {
+        flex: 1, // <--- CHANGED: Uses full remaining height
         width: '100%',
-        maxHeight: 250,
         backgroundColor: '#f9f9f9',
         borderRadius: 12,
         padding: 10,
-        marginBottom: 40,
+        marginBottom: 20,
         borderWidth: 1,
         borderColor: '#eee'
     },
@@ -222,7 +187,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 12,
+        paddingVertical: 15, // Slightly taller rows for admin
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
@@ -231,33 +196,15 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
         borderRadius: 10,
+        minWidth: 40,
+        alignItems: 'center'
     },
     statusText: {
-        fontSize: 10,
+        fontSize: 11,
         color: 'white',
         fontWeight: 'bold',
     },
-
-    // --- BUTTON STYLES ---
-    bigBlueButton: {
-        width: 150,
-        height: 150,
-        borderRadius: 75,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4.65,
-        elevation: 8,
-        marginBottom: 20,
-    },
-    helperText: {
-        fontSize: 18,
-        color: '#555',
-        fontWeight: '500',
-    }
 });

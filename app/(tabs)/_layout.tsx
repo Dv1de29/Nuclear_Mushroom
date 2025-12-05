@@ -1,12 +1,12 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import React from 'react';
-import { Pressable } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // 1. Import Storage
+import { Tabs } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
   color: string;
@@ -16,41 +16,63 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  
+  // 2. Add State to track role and loading status
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 3. Fetch the role when the app loads
+  useEffect(() => {
+    const checkRole = async () => {
+      try {
+        const role = await AsyncStorage.getItem('userRole'); // Make sure key matches your login
+        setIsAdmin(role === 'admin');
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkRole();
+  }, []);
+
+  // 4. (Optional) Show nothing or a spinner while checking permissions
+  // This prevents the admin tab from "flashing" briefly before disappearing
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
         headerShown: false,
       }}>
+      
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <FontAwesome
-                    name="info-circle"
-                    size={25}
-                    color={Colors[colorScheme ?? 'light'].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
+          title: 'Home',
+          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+          // ... (kept your headerRight logic if needed, removed for brevity)
         }}
       />
+
+      {/* 5. The Conditional Admin Tab */}
       <Tabs.Screen
-        name="two"
+        name="manage"
         options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          title: 'Admin Panel',
+          tabBarIcon: ({ color }) => <TabBarIcon name="lock" color={color} />,
+          
+          // === THE MAGIC LINE ===
+          // If isAdmin is true, href is undefined (default behavior).
+          // If isAdmin is false, href is null (removes button from tab bar).
+          href: isAdmin ? undefined : null, 
         }}
       />
     </Tabs>
