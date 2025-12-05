@@ -10,27 +10,28 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    useColorScheme
 } from 'react-native';
 
-// 1. Import or Define the Type
 import ConnectionData from '@/assets/data/connections.json';
 import { ConnectionProfile } from '@/constants/types';
+import Colors from '@/constants/Colors';
 
-const connections: ConnectionProfile[] = ConnectionData as ConnectionProfile[]
+const connections: ConnectionProfile[] = ConnectionData as ConnectionProfile[];
 
 export default function EditScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams(); 
+  const { id } = useLocalSearchParams();
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
 
-  // 3. State for the Form Data
   const [formData, setFormData] = useState<ConnectionProfile | null>(null);
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
-  // 4. Load Data on Mount
   useEffect(() => {
-    // Simulate finding the item in the DB
     const foundItem = connections.find(item => item.id === id);
-    
+
     if (foundItem) {
       setFormData(foundItem);
     } else {
@@ -43,147 +44,202 @@ export default function EditScreen() {
     }
   }, [id]);
 
+  const updateField = (key: keyof ConnectionProfile, value: any) => {
+    if (!formData) return;
+    setFormData(prev => prev ? ({ ...prev, [key]: value }) : null);
+  };
+
   const handleSave = () => {
-    // Here you would normally save to AsyncStorage or API
     console.log("Saving Data:", formData);
     Alert.alert("Success", "Connection Profile updated!");
     router.back();
   };
 
-  if (!formData) return <View style={styles.loading}><Text>Loading...</Text></View>;
+  if (!formData) return (
+    <View style={[styles.loading, { backgroundColor: theme.background }]}>
+        <Text style={{ color: theme.text }}>Loading...</Text>
+    </View>
+  );
+
+  const renderLabel = (text: string) => (
+    <Text style={[styles.label, { color: theme.textSecondary }]}>{text}</Text>
+  );
+
+  const renderInput = (
+    field: keyof ConnectionProfile,
+    placeholder: string,
+    keyboardType: any = 'default',
+    secure = false
+  ) => {
+    if (!formData) return null;
+    const isFocused = focusedInput === field;
+
+    return (
+      <View style={{ marginBottom: 16 }}>
+        {renderLabel(field === 'ipAddress' ? 'IP Address' : field.charAt(0).toUpperCase() + field.slice(1))}
+        <TextInput
+          style={[
+            styles.input,
+            {
+              backgroundColor: theme.card,
+              color: theme.text,
+              borderColor: isFocused ? theme.tint : theme.border,
+              borderWidth: isFocused ? 1.5 : 1,
+            }
+          ]}
+          value={field === 'port' ? formData.port.toString() : String(formData[field])}
+          placeholder={placeholder}
+          placeholderTextColor={theme.textSecondary}
+          keyboardType={keyboardType}
+          secureTextEntry={secure}
+          onFocus={() => setFocusedInput(field)}
+          onBlur={() => setFocusedInput(null)}
+          onChangeText={(text) => {
+            if (field === 'port') {
+                const val = text.replace(/[^0-9]/g, '');
+                updateField('port', parseInt(val) || 0);
+            } else {
+                updateField(field, text);
+            }
+          }}
+        />
+      </View>
+    );
+  };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"} 
-      style={{ flex: 1 }}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1, backgroundColor: theme.background }}
     >
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
-        
-        <Text style={styles.headerTitle}>Edit Configuration</Text>
-        <Text style={styles.subHeader}>ID: {id}</Text>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+      >
 
-        {/* --- SECTION: GENERAL --- */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Profile Name</Text>
-          <TextInput 
-            style={styles.input} 
-            value={formData.name}
-            placeholder="e.g. Office VPN"
-            onChangeText={(text) => setFormData({...formData, name: text})}
-          />
-
-          <Text style={styles.label}>Location</Text>
-          <TextInput 
-            style={styles.input} 
-            value={formData.location}
-            placeholder="e.g. Bucharest, RO"
-            onChangeText={(text) => setFormData({...formData, location: text})}
-          />
-        </View>
-
-        {/* --- SECTION: NETWORK --- */}
-        <View style={styles.section}>
-          <Text style={styles.label}>IP Address</Text>
-          <TextInput 
-            style={styles.input} 
-            value={formData.ipAddress}
-            placeholder="192.168.1.1"
-            keyboardType="numeric"
-            onChangeText={(text) => setFormData({...formData, ipAddress: text})}
-          />
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 10 }}>
-              <Text style={styles.label}>Port</Text>
-              <TextInput 
-                style={styles.input} 
-                value={formData.port.toString()}
-                keyboardType="number-pad"
-                onChangeText={(text) => setFormData({...formData, port: parseInt(text) || 0})}
-              />
+        <View style={{ marginBottom: 30 }}>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>Edit Configuration</Text>
+            <View style={[styles.idBadge, { backgroundColor: theme.card }]}>
+                <Text style={[styles.idText, { color: theme.textSecondary }]}>ID: {id}</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Protocol</Text>
-              <TextInput 
-                style={styles.input} 
-                value={formData.protocol}
-                onChangeText={(text) => setFormData({...formData, protocol: text})}
-              />
+        </View>
+
+        <View style={styles.section}>
+          {renderInput('name', 'e.g. Office VPN')}
+          {renderInput('location', 'e.g. Bucharest, RO')}
+        </View>
+
+        <View style={styles.section}>
+            {renderInput('ipAddress', '192.168.1.1', 'numeric')}
+
+            <View style={styles.row}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                     {renderInput('port', '8080', 'number-pad')}
+                </View>
+                <View style={{ flex: 1 }}>
+                     {renderInput('protocol', 'OpenVPN')}
+                </View>
             </View>
+        </View>
+
+        <View style={[styles.section, { marginBottom: 24 }]}>
+          {renderLabel('Transport Layer')}
+          <View style={[styles.segmentContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            {['TCP', 'UDP'].map((type) => {
+                const isActive = formData.transportLayer === type;
+                return (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.segmentBtn,
+                      isActive && { backgroundColor: theme.tint, shadowColor: theme.tint }
+                    ]}
+                    onPress={() => updateField('transportLayer', type)}
+                  >
+                    <Text style={[
+                      styles.segmentText,
+                      { color: isActive ? '#fff' : theme.textSecondary, fontWeight: isActive ? '700' : '500' }
+                    ]}>{type}</Text>
+                  </TouchableOpacity>
+                );
+            })}
           </View>
         </View>
 
-        {/* --- SECTION: TRANSPORT LAYER (Buttons) --- */}
         <View style={styles.section}>
-          <Text style={styles.label}>Transport Layer</Text>
-          <View style={styles.toggleRow}>
-            {['TCP', 'UDP'].map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.toggleBtn, 
-                  formData.transportLayer === type && styles.toggleBtnActive
-                ]}
-                onPress={() => setFormData({...formData, transportLayer: type as 'TCP' | 'UDP'})}
-              >
-                <Text style={[
-                  styles.toggleText, 
-                  formData.transportLayer === type && styles.toggleTextActive
-                ]}>{type}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+            {renderLabel('Security Settings')}
+
+            <View style={[styles.switchCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <View>
+                    <Text style={[styles.switchTitle, { color: theme.text }]}>Obfuscation</Text>
+                    <Text style={[styles.switchSubtitle, { color: theme.textSecondary }]}>Hide VPN traffic</Text>
+                </View>
+                <Switch
+                    value={formData.obfuscation}
+                    onValueChange={(val) => updateField('obfuscation', val)}
+                    trackColor={{ false: theme.border, true: theme.tint }}
+                    thumbColor={"#fff"}
+                />
+            </View>
+
+            <View style={{ marginTop: 20 }}>
+                {renderLabel('Authentication Type')}
+                <View style={[styles.segmentContainer, { backgroundColor: theme.card, borderColor: theme.border, marginBottom: 16 }]}>
+                    {['password', 'uuid', 'certificate'].map((type) => {
+                        const isActive = formData.authType === type;
+                        return (
+                        <TouchableOpacity
+                            key={type}
+                            style={[
+                            styles.segmentBtn,
+                            isActive && { backgroundColor: theme.tint }
+                            ]}
+                            onPress={() => updateField('authType', type)}
+                        >
+                            <Text style={[
+                            styles.segmentText,
+                            { fontSize: 13, color: isActive ? '#fff' : theme.textSecondary, fontWeight: isActive ? '700' : '500' }
+                            ]}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
+                        </TouchableOpacity>
+                        );
+                    })}
+                </View>
+
+                <TextInput
+                    style={[
+                        styles.input,
+                        {
+                          backgroundColor: theme.card,
+                          color: theme.text,
+                          borderColor: theme.border,
+                          height: 50
+                        }
+                    ]}
+                    value={formData.authValue}
+                    placeholder={formData.authType === 'password' ? "Enter Password..." : "Enter Key/UUID..."}
+                    placeholderTextColor={theme.textSecondary}
+                    secureTextEntry={formData.authType === 'password'}
+                    onChangeText={(text) => updateField('authValue', text)}
+                />
+            </View>
         </View>
 
-        {/* --- SECTION: SECURITY & AUTH --- */}
-        <View style={styles.section}>
-          <View style={styles.switchRow}>
-            <Text style={styles.label}>Enable Obfuscation</Text>
-            <Switch 
-              value={formData.obfuscation}
-              onValueChange={(val) => setFormData({...formData, obfuscation: val})}
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-              thumbColor={formData.obfuscation ? "#2f95dc" : "#f4f3f4"}
-            />
-          </View>
+        <View style={{ marginTop: 40 }}>
+            <TouchableOpacity
+                onPress={handleSave}
+                activeOpacity={0.8}
+                style={[styles.primaryBtn, { backgroundColor: theme.tint, shadowColor: theme.tint }]}
+            >
+                <Text style={styles.primaryBtnText}>Save Changes</Text>
+            </TouchableOpacity>
 
-          <Text style={styles.label}>Authentication Type</Text>
-          <View style={styles.toggleRow}>
-            {['password', 'uuid', 'certificate'].map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.toggleBtn, 
-                  formData.authType === type && styles.toggleBtnActive
-                ]}
-                onPress={() => setFormData({...formData, authType: type as any})}
-              >
-                <Text style={[
-                  styles.toggleText, 
-                  formData.authType === type && styles.toggleTextActive
-                ]}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={styles.label}>Auth Value ({formData.authType})</Text>
-          <TextInput 
-            style={styles.input} 
-            value={formData.authValue}
-            placeholder={formData.authType === 'password' ? "Enter Password" : "Enter Key/UUID"}
-            secureTextEntry={formData.authType === 'password'}
-            onChangeText={(text) => setFormData({...formData, authValue: text})}
-          />
+            <TouchableOpacity
+                onPress={() => router.back()}
+                style={styles.ghostBtn}
+            >
+                <Text style={[styles.ghostBtnText, { color: theme.textSecondary }]}>Discard Changes</Text>
+            </TouchableOpacity>
         </View>
-
-        {/* --- ACTION BUTTONS --- */}
-        <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>
-          <Text style={styles.saveBtnText}>Save Changes</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.back()} style={styles.cancelBtn}>
-          <Text style={styles.cancelBtnText}>Cancel</Text>
-        </TouchableOpacity>
 
       </ScrollView>
     </KeyboardAvoidingView>
@@ -191,107 +247,101 @@ export default function EditScreen() {
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  container: { 
-    flex: 1, 
-    backgroundColor: '#fff',
-    padding: 20,
+  loading: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center'
   },
-  headerTitle: { 
-    fontSize: 28, 
-    fontWeight: 'bold', 
-    color: '#333',
-    marginTop: 10
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginBottom: 8
   },
-  subHeader: {
-    fontSize: 14,
-    color: '#666',
+  idBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
     marginBottom: 20
   },
+  idText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
+  },
   section: {
-    marginBottom: 25,
+    marginBottom: 10,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between'
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#555',
     marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5
   },
   input: {
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
-    marginBottom: 15,
   },
-  // Toggle Button Styles
-  toggleRow: {
+  segmentContainer: {
     flexDirection: 'row',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    padding: 2,
-    marginBottom: 15
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
   },
-  toggleBtn: {
+  segmentBtn: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 6,
+    borderRadius: 8,
   },
-  toggleBtnActive: {
-    backgroundColor: 'white',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 2,
+  segmentText: {
+    fontSize: 14,
   },
-  toggleText: {
-    color: '#666',
-    fontWeight: '500'
-  },
-  toggleTextActive: {
-    color: '#2f95dc',
-    fontWeight: 'bold'
-  },
-  // Switch
-  switchRow: {
+  switchCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
-    backgroundColor: '#f9f9f9',
-    padding: 10,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#eee'
   },
-  // Footer Buttons
-  saveBtn: { 
-    backgroundColor: '#2f95dc', 
-    padding: 18, 
-    borderRadius: 12, 
+  switchTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  switchSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  primaryBtn: {
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
-    marginBottom: 10,
-    elevation: 3
+    marginBottom: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6
   },
-  saveBtnText: { 
-    color: 'white', 
+  primaryBtnText: {
+    color: 'white',
     fontWeight: 'bold',
-    fontSize: 16 
+    fontSize: 17
   },
-  cancelBtn: { 
-    padding: 15, 
-    alignItems: 'center' 
+  ghostBtn: {
+    padding: 10,
+    alignItems: 'center'
   },
-  cancelBtnText: { 
-    color: '#e74c3c', 
-    fontWeight: '600' 
+  ghostBtnText: {
+    fontWeight: '600',
+    fontSize: 16
   }
 });

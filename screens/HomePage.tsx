@@ -11,37 +11,29 @@ import {
     Text,
     TouchableOpacity,
     View,
+    useColorScheme,
+    Dimensions
 } from 'react-native';
 
 import ConnectionData from '@/assets/data/connections.json';
-
 import { ConnectionProfile } from '@/constants/types';
+import Colors from '@/constants/Colors';
 
-interface ItemType {
-    id: string,
-    title: string,
-    status: boolean,
-}
-
-const connections: ConnectionProfile[] = ConnectionData as ConnectionProfile[];;
-
-const MOCK_ITEMS: ItemType[] = Array.from({ length: 15 }, (_, i) => ({
-    id: i.toString(),
-    title: `System Log Entry #${i + 1}`,
-    status: false
-}));
+const connections: ConnectionProfile[] = ConnectionData as ConnectionProfile[];
+const { width } = Dimensions.get('window');
 
 export default function HomePage() {
     const router = useRouter();
-    const [userName, setUserName] = useState("Guest");
-    const [items, setItems] = useState<ConnectionProfile[]>(connections)
-    const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+    const colorScheme = useColorScheme();
+    const theme = Colors[colorScheme ?? 'light'];
 
-    // Removed the useRef since we don't need it with the new logic
+    const [userName, setUserName] = useState("Guest");
+    const [items, setItems] = useState<ConnectionProfile[]>(connections);
+    const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
     const selectedItem = useMemo(() => {
-        return items.find(item => item.id === selectedItemId)
-    }, [items, selectedItemId]) // Added 'items' to dependency array so it updates when status changes
+        return items.find(item => item.id === selectedItemId);
+    }, [items, selectedItemId]);
 
     useEffect(() => {
         const loadUser = async () => {
@@ -56,18 +48,16 @@ export default function HomePage() {
 
         setItems(prevItems => {
             return prevItems.map(item => {
-                // Logic: If selected, toggle it. If not selected, turn it off.
                 if (item.id === selectedItemId) {
                     return { ...item, status: !item.status };
                 }
-                // Force everyone else to false
                 return { ...item, status: false };
             })
         })
     };
 
     const handleLoginLink = () => {
-        AsyncStorage.clear()
+        AsyncStorage.clear();
         router.replace('/(auth)/login');
     };
 
@@ -75,75 +65,127 @@ export default function HomePage() {
         setSelectedItemId(item.id);
     };
 
-    const renderItem = ({ item }: { item: ConnectionProfile }) => (
-        <TouchableOpacity
-            style={[
-                styles.itemRow,
-                // Highlight the selected row slightly
-                item.id === selectedItemId && { backgroundColor: '#f0f8ff' }
-            ]}
-            onPress={() => { handleItemPress(item) }}
-        >
-            <Text style={styles.itemText}>{item.name}</Text>
-            <View style={[
-                styles.statusBadge,
-                { backgroundColor: item.status ? '#4caf50' : '#e74c3c' }
-            ]}>
-                <Text style={styles.statusText}>{item.status ? "OK" : "OFF"}</Text>
-            </View>
-        </TouchableOpacity>
-    );
+    const renderItem = ({ item }: { item: ConnectionProfile }) => {
+        const isSelected = item.id === selectedItemId;
+
+        return (
+            <TouchableOpacity
+                style={[
+                    styles.cardItem,
+                    {
+                        backgroundColor: theme.card,
+                        borderColor: isSelected ? theme.tint : 'transparent',
+                        borderWidth: isSelected ? 2 : 0
+                    }
+                ]}
+                onPress={() => handleItemPress(item)}
+                activeOpacity={0.7}
+            >
+                <View style={styles.cardLeft}>
+                    <View style={[styles.iconBox, { backgroundColor: isSelected ? theme.tint : theme.background }]}>
+                        <Ionicons
+                            name={item.protocol.toLowerCase().includes('wireguard') ? "shield-checkmark-outline" : "globe-outline"}
+                            size={20}
+                            color={isSelected ? '#fff' : theme.textSecondary}
+                        />
+                    </View>
+                    <View>
+                        <Text style={[styles.itemTitle, { color: theme.text }]}>{item.name}</Text>
+                        <Text style={[styles.itemSubtitle, { color: theme.textSecondary }]}>{item.location}</Text>
+                    </View>
+                </View>
+
+                <View style={[
+                    styles.statusBadge,
+                    { backgroundColor: item.status ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.1)' }
+                ]}>
+                    <View style={[styles.statusDot, { backgroundColor: item.status ? '#10B981' : '#EF4444' }]} />
+                    <Text style={[
+                        styles.statusText,
+                        { color: item.status ? '#10B981' : '#EF4444' }
+                    ]}>
+                        {item.status ? "CONNECTED" : "OFFLINE"}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        );
+    };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
             <View style={styles.container}>
 
-                {/* === NAVBAR === */}
-                <View style={styles.navbar}>
-                    <View style={styles.userContainer}>
-                        <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>{userName.charAt(0).toUpperCase()}</Text>
+                <View style={styles.header}>
+                    <View style={styles.userSection}>
+                        <View style={[styles.avatar, { backgroundColor: theme.card }]}>
+                            <Text style={[styles.avatarText, { color: theme.tint }]}>
+                                {userName.charAt(0).toUpperCase()}
+                            </Text>
                         </View>
-                        <Text style={styles.userName}>Hello, {userName}</Text>
+                        <View>
+                            <Text style={[styles.greetingLabel, { color: theme.textSecondary }]}>Welcome back,</Text>
+                            <Text style={[styles.userName, { color: theme.text }]}>{userName}</Text>
+                        </View>
                     </View>
 
-                    <TouchableOpacity onPress={handleLoginLink}>
-                        <Text style={styles.loginLink}>{userName !== "Guest" ? "Log out" : "Log In"}</Text>
+                    <TouchableOpacity
+                        style={[styles.logoutBtn, { backgroundColor: theme.card }]}
+                        onPress={handleLoginLink}
+                    >
+                        <Ionicons
+                            name={userName !== "Guest" ? "log-out-outline" : "log-in-outline"}
+                            size={20}
+                            color={theme.text}
+                        />
                     </TouchableOpacity>
                 </View>
 
-                {/* === MAIN CONTENT === */}
                 <View style={styles.content}>
 
-                    {/* === LIST SECTION === */}
-                    <View style={styles.listContainer}>
-                        <Text style={styles.listHeader}>Recent Activity</Text>
+                    <View style={styles.listSection}>
+                        <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>Available Connections</Text>
                         <FlatList
                             data={items}
                             renderItem={renderItem}
                             keyExtractor={item => item.id}
-                            showsVerticalScrollIndicator={true}
-                            contentContainerStyle={{ paddingBottom: 10 }}
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={{ paddingBottom: 20 }}
                         />
                     </View>
 
-                    {/* Big Blue Button */}
-                    {selectedItem && <>
-                        <TouchableOpacity
-                            style={[
-                                styles.bigBlueButton,
-                                { backgroundColor: selectedItem.status ? '#2f95dc' : '#e74c3c' }
-                            ]}
-                            onPress={handleBigButtonPress}
-                            activeOpacity={0.7}
-                        >
-                            <Ionicons name={selectedItem.status ? "rocket" : "rocket-outline"} size={40} color="white" />
-                        </TouchableOpacity>
+                    {selectedItem ? (
+                        <View style={styles.controlSection}>
+                            <View style={[styles.connectionInfo, { backgroundColor: theme.card }]}>
+                                <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Selected Server</Text>
+                                <Text style={[styles.infoValue, { color: theme.tint }]}>{selectedItem.name}</Text>
+                            </View>
 
-                        <Text style={styles.helperText}>
-                            {`Server is ${selectedItem.status ? "ON" : "OFF"}`}
-                        </Text>
-                    </>}
+                            <TouchableOpacity
+                                style={[
+                                    styles.powerButton,
+                                    {
+                                        backgroundColor: selectedItem.status ? theme.error : theme.tint,
+                                        shadowColor: selectedItem.status ? theme.error : theme.tint
+                                    }
+                                ]}
+                                onPress={handleBigButtonPress}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons name="power" size={60} color="white" />
+                            </TouchableOpacity>
+
+                            <Text style={[styles.statusLabel, { color: theme.textSecondary }]}>
+                                {selectedItem.status ? "Tap to Disconnect" : "Tap to Connect"}
+                            </Text>
+                        </View>
+                    ) : (
+                        <View style={styles.emptyState}>
+                            <Ionicons name="earth" size={60} color={theme.border} />
+                            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                                Select a server from the list above to connect.
+                            </Text>
+                        </View>
+                    )}
 
                 </View>
 
@@ -155,115 +197,163 @@ export default function HomePage() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#fff',
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
     container: {
         flex: 1,
         paddingHorizontal: 20,
     },
-    navbar: {
+    header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingVertical: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        marginBottom: 20,
+        marginBottom: 10,
     },
-    userContainer: {
+    userSection: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     avatar: {
-        width: 35,
-        height: 35,
-        backgroundColor: '#eee',
-        borderRadius: 20,
+        width: 45,
+        height: 45,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 10,
+        marginRight: 12,
     },
     avatarText: {
-        fontWeight: 'bold',
-        color: '#666',
+        fontWeight: '800',
+        fontSize: 18,
+    },
+    greetingLabel: {
+        fontSize: 12,
+        fontWeight: '500',
     },
     userName: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
-        color: '#333',
     },
-    loginLink: {
-        color: '#6200ee',
-        fontWeight: '600',
-        fontSize: 14,
+    logoutBtn: {
+        padding: 10,
+        borderRadius: 12,
     },
     content: {
         flex: 1,
-        justifyContent: 'flex-start',
-        alignItems: 'center',
-        paddingBottom: 40,
+        justifyContent: 'space-between',
     },
 
-    // --- LIST STYLES ---
-    listContainer: {
-        width: '100%',
-        maxHeight: 250,
-        backgroundColor: '#f9f9f9',
-        borderRadius: 12,
-        padding: 10,
-        marginBottom: 40,
-        borderWidth: 1,
-        borderColor: '#eee'
+    listSection: {
+        flex: 1,
+        marginBottom: 20,
     },
-    listHeader: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#999',
-        marginBottom: 10,
+    sectionTitle: {
+        fontSize: 13,
+        fontWeight: '700',
         textTransform: 'uppercase',
         letterSpacing: 1,
+        marginBottom: 15,
+        marginLeft: 4,
     },
-    itemRow: {
+    cardItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 10,
     },
-    itemText: {
+    cardLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    iconBox: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    itemTitle: {
         fontSize: 16,
-        color: '#333',
+        fontWeight: '700',
+    },
+    itemSubtitle: {
+        fontSize: 12,
+        marginTop: 2,
     },
     statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 20,
+    },
+    statusDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        marginRight: 6,
     },
     statusText: {
         fontSize: 10,
-        color: 'white',
-        fontWeight: 'bold',
+        fontWeight: '700',
     },
 
-    // --- BUTTON STYLES ---
-    bigBlueButton: {
-        width: 150,
-        height: 150,
-        borderRadius: 75,
+    controlSection: {
+        alignItems: 'center',
+        marginBottom: 30,
+        paddingTop: 20,
+    },
+    connectionInfo: {
+        paddingHorizontal: 20,
+        paddingVertical: 8,
+        borderRadius: 20,
+        alignItems: 'center',
+        marginBottom: 25,
+    },
+    infoLabel: {
+        fontSize: 11,
+        fontWeight: '500',
+        textTransform: 'uppercase',
+    },
+    infoValue: {
+        fontSize: 16,
+        fontWeight: '800',
+        marginTop: 2,
+    },
+    powerButton: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.3,
-        shadowRadius: 4.65,
-        elevation: 8,
+        shadowRadius: 20,
+        elevation: 10,
         marginBottom: 20,
+        borderWidth: 4,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
-    helperText: {
-        fontSize: 18,
-        color: '#555',
+    statusLabel: {
+        fontSize: 14,
         fontWeight: '500',
+    },
+
+    emptyState: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 40,
+        opacity: 0.6,
+        marginBottom: 50,
+    },
+    emptyText: {
+        textAlign: 'center',
+        marginTop: 15,
+        fontSize: 15,
+        lineHeight: 22,
     }
 });

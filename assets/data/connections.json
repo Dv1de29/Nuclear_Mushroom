@@ -63,5 +63,57 @@
     "authValue": "a2c3d4e5-f6g7-8h9i-0j1k-2l3m4n5o6p7q",
     "obfuscation": false,
     "status": false
+  },
+  {
+    "id": "3",
+    "name": "Romania Secure Core",
+    "location": "Bucharest, RO",
+    "ipAddress": "89.100.22.4",
+    "port": 8080,
+    "protocol": "Shadowsocks",
+    "transportLayer": "TCP",
+    "authType": "certificate",
+    "authValue": "-----BEGIN CERTIFICATE-----MIIDlzCCRn+gAwIBAgIE...",
+    "obfuscation": true,
+    "status": false
+  },
+  {
+    "id": "3",
+    "name": "Romania Secure Core",
+    "location": "Bucharest, RO",
+    "ipAddress": "89.100.22.4",
+    "port": 8080,
+    "protocol": "Shadowsocks",
+    "transportLayer": "TCP",
+    "authType": "certificate",
+    "authValue": "-----BEGIN CERTIFICATE-----MIIDlzCCRn+gAwIBAgIE...",
+    "obfuscation": true,
+    "status": false
+  },
+  {
+    "id": "3",
+    "name": "Romania Secure Core",
+    "location": "Bucharest, RO",
+    "ipAddress": "89.100.22.4",
+    "port": 8080,
+    "protocol": "Shadowsocks",
+    "transportLayer": "TCP",
+    "authType": "certificate",
+    "authValue": "-----BEGIN CERTIFICATE-----MIIDlzCCRn+gAwIBAgIE...",
+    "obfuscation": true,
+    "status": false
+  },
+  {
+    "id": "3",
+    "name": "Romania Secure Core",
+    "location": "Bucharest, RO",
+    "ipAddress": "89.100.22.4",
+    "port": 8080,
+    "protocol": "Shadowsocks",
+    "transportLayer": "TCP",
+    "authType": "certificate",
+    "authValue": "-----BEGIN CERTIFICATE-----MIIDlzCCRn+gAwIBAgIE...",
+    "obfuscation": true,
+    "status": false
   }
 ]

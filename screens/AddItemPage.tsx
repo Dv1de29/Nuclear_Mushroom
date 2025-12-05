@@ -10,13 +10,14 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    useColorScheme
 } from 'react-native';
 
 import ConnectionData from '@/assets/data/connections.json';
 import { ConnectionProfile } from '@/constants/types';
+import Colors from '@/constants/Colors';
 
-// 1. Initial Empty State
 const INITIAL_STATE: ConnectionProfile = {
   id: "",
   name: "",
@@ -28,21 +29,20 @@ const INITIAL_STATE: ConnectionProfile = {
   authType: 'password',
   authValue: "",
   obfuscation: false,
-  status: false // Default to disconnected
+  status: false
 };
 
 export default function AddScreen() {
   const router = useRouter();
-  
-  const [formData, setFormData] = useState<ConnectionProfile>(INITIAL_STATE);
-  
-  // 2. NEW: State to hold error messages
-  const [errors, setErrors] = useState<Partial<Record<keyof ConnectionProfile, string>>>({});
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
 
-  // 3. Helper to update field & clear specific error
+  const [formData, setFormData] = useState<ConnectionProfile>(INITIAL_STATE);
+  const [errors, setErrors] = useState<Partial<Record<keyof ConnectionProfile, string>>>({});
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+
   const updateField = (key: keyof ConnectionProfile, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));
-    // Clear error when user types
     if (errors[key]) {
       setErrors(prev => ({ ...prev, [key]: undefined }));
     }
@@ -52,29 +52,25 @@ export default function AddScreen() {
     let valid = true;
     let newErrors: Partial<Record<keyof ConnectionProfile, string>> = {};
 
-    // Name Check
     if (!formData.name.trim()) {
       newErrors.name = "Profile name is required.";
       valid = false;
     }
 
-    // IP Check
     const ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
     if (!formData.ipAddress.trim()) {
       newErrors.ipAddress = "IP Address is required.";
       valid = false;
     } else if (!ipRegex.test(formData.ipAddress)) {
-      newErrors.ipAddress = "Invalid IPv4 format (e.g. 192.168.1.1).";
+      newErrors.ipAddress = "Invalid IPv4 format.";
       valid = false;
     }
 
-    // Port Check
     if (!formData.port || formData.port < 1 || formData.port > 65535) {
       newErrors.port = "Port must be 1 - 65535.";
       valid = false;
     }
 
-    // Protocol Check
     if (!formData.protocol.trim()) {
       newErrors.protocol = "Protocol is required.";
       valid = false;
@@ -84,22 +80,15 @@ export default function AddScreen() {
     return valid;
   };
 
-  const handleCreate = () => { // <--- Removed 'async'
-    if (!validate()) {
-      // Alert.alert("Error", "Please fix...");
-      return;
-    }
+  const handleCreate = () => {
+    if (!validate()) return;
 
     try {
-      // 1. USE IMPORTED DATA DIRECTLY (Don't parse it)
-      // Since we are not using storage, we check against the static file + whatever we have in memory
-      // NOTE: This check is weak because it only checks the initial JSON file, not items added in this session.
-      const currentList: ConnectionProfile[] = ConnectionData as ConnectionProfile[]; 
-
-      const isDuplicate = currentList.some(item => 
-        item.ipAddress === formData.ipAddress && 
+      const currentList: ConnectionProfile[] = ConnectionData as ConnectionProfile[];
+      const isDuplicate = currentList.some(item =>
+        item.ipAddress === formData.ipAddress &&
         item.port === formData.port
-      );    
+      );
 
       if (isDuplicate) {
         setErrors(prev => ({ ...prev, ipAddress: "This IP:Port combination already exists." }));
@@ -111,13 +100,8 @@ export default function AddScreen() {
         id: Math.random().toString(36).slice(2, 9)
       };
 
-      // 2. LOG IT (Since we aren't saving to disk)
       console.log("Created (Session Only):", newProfile);
-      
-      // 3. IMPORTANT: You need a way to pass this back to AdminScreen!
-      // Since you aren't saving to disk, AdminScreen won't know about this new item
-      // unless you use navigation parameters or a Global State.
-      
+
       Alert.alert("Success", "Profile created (Session Only)!", [
         { text: "OK", onPress: () => router.back() }
       ]);
@@ -127,147 +111,186 @@ export default function AddScreen() {
     }
   };
 
+  const renderLabel = (text: string) => (
+    <Text style={[styles.label, { color: theme.textSecondary }]}>{text}</Text>
+  );
+
+  const renderInput = (
+    field: keyof ConnectionProfile,
+    placeholder: string,
+    keyboardType: any = 'default',
+    secure = false
+  ) => {
+    const isError = !!errors[field];
+    const isFocused = focusedInput === field;
+
+    return (
+      <View style={{ marginBottom: 16 }}>
+        {renderLabel(field === 'ipAddress' ? 'IP Address' : field.charAt(0).toUpperCase() + field.slice(1))}
+        <TextInput
+          style={[
+            styles.input,
+            {
+              backgroundColor: theme.card,
+              color: theme.text,
+              borderColor: isError ? theme.error : (isFocused ? theme.tint : theme.border),
+              borderWidth: isFocused || isError ? 1.5 : 1,
+            }
+          ]}
+          value={field === 'port' ? formData.port.toString() : String(formData[field])}
+          placeholder={placeholder}
+          placeholderTextColor={theme.textSecondary}
+          keyboardType={keyboardType}
+          secureTextEntry={secure}
+          onFocus={() => setFocusedInput(field)}
+          onBlur={() => setFocusedInput(null)}
+          onChangeText={(text) => {
+            if (field === 'port') {
+                const val = text.replace(/[^0-9]/g, '');
+                updateField('port', parseInt(val) || 0);
+            } else {
+                updateField(field, text);
+            }
+          }}
+        />
+        {isError && <Text style={[styles.errorText, { color: theme.error }]}>{errors[field]}</Text>}
+      </View>
+    );
+  };
+
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"} 
-      style={{ flex: 1 }}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1, backgroundColor: theme.background }}
     >
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
-        
-        <Text style={styles.headerTitle}>New Connection</Text>
-        <Text style={styles.subHeader}>Configure a new proxy endpoint</Text>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+      >
 
-        {/* --- GENERAL SECTION --- */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Profile Name</Text>
-          <TextInput 
-            style={[styles.input, errors.name && styles.inputError]} 
-            value={formData.name}
-            placeholder="e.g. Asia Pacific Secure"
-            onChangeText={(text) => updateField('name', text)}
-          />
-          {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-
-          <Text style={styles.label}>Location</Text>
-          <TextInput 
-            style={styles.input} 
-            value={formData.location}
-            placeholder="e.g. Tokyo, JP"
-            onChangeText={(text) => updateField('location', text)}
-          />
+        <View style={{ marginBottom: 30 }}>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>New Connection</Text>
+          <Text style={[styles.subHeader, { color: theme.textSecondary }]}>
+            Configure a new secure proxy endpoint
+          </Text>
         </View>
 
-        {/* --- NETWORK SECTION --- */}
         <View style={styles.section}>
-          <Text style={styles.label}>IP Address</Text>
-          <TextInput 
-            style={[styles.input, errors.ipAddress && styles.inputError]} 
-            value={formData.ipAddress}
-            placeholder="0.0.0.0"
-            keyboardType="numeric"
-            onChangeText={(text) => updateField('ipAddress', text)}
-          />
-          {errors.ipAddress && <Text style={styles.errorText}>{errors.ipAddress}</Text>}
+          {renderInput('name', 'e.g. Office VPN')}
+          {renderInput('location', 'e.g. Amsterdam, NL')}
+        </View>
 
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 10 }}>
-              <Text style={styles.label}>Port</Text>
-              <TextInput 
-                style={[styles.input, errors.port && styles.inputError]} 
-                value={formData.port.toString()}
-                keyboardType="number-pad"
-                maxLength={5}
-                onChangeText={(text) => {
-                    const val = text.replace(/[^0-9]/g, '');
-                    updateField('port', parseInt(val) || 0);
-                }}
-              />
-              {errors.port && <Text style={styles.errorText}>{errors.port}</Text>}
+        <View style={styles.section}>
+            {renderInput('ipAddress', '0.0.0.0', 'numeric')}
+
+            <View style={styles.row}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                     {renderInput('port', '8080', 'number-pad')}
+                </View>
+                <View style={{ flex: 1 }}>
+                     {renderInput('protocol', 'WireGuard')}
+                </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Protocol</Text>
-              <TextInput 
-                style={[styles.input, errors.protocol && styles.inputError]} 
-                value={formData.protocol}
-                placeholder="WireGuard"
-                onChangeText={(text) => updateField('protocol', text)}
-              />
-              {errors.protocol && <Text style={styles.errorText}>{errors.protocol}</Text>}
+        </View>
+
+        <View style={[styles.section, { marginBottom: 24 }]}>
+          {renderLabel('Transport Layer')}
+          <View style={[styles.segmentContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            {['TCP', 'UDP'].map((type) => {
+                const isActive = formData.transportLayer === type;
+                return (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.segmentBtn,
+                      isActive && { backgroundColor: theme.tint, shadowColor: theme.tint }
+                    ]}
+                    onPress={() => updateField('transportLayer', type)}
+                  >
+                    <Text style={[
+                      styles.segmentText,
+                      { color: isActive ? '#fff' : theme.textSecondary, fontWeight: isActive ? '700' : '500' }
+                    ]}>{type}</Text>
+                  </TouchableOpacity>
+                );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+            {renderLabel('Security Settings')}
+
+            <View style={[styles.switchCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <View>
+                    <Text style={[styles.switchTitle, { color: theme.text }]}>Obfuscation</Text>
+                    <Text style={[styles.switchSubtitle, { color: theme.textSecondary }]}>Hide VPN traffic</Text>
+                </View>
+                <Switch
+                    value={formData.obfuscation}
+                    onValueChange={(val) => updateField('obfuscation', val)}
+                    trackColor={{ false: theme.border, true: theme.tint }}
+                    thumbColor={"#fff"}
+                />
             </View>
-          </View>
+
+            <View style={{ marginTop: 20 }}>
+                {renderLabel('Authentication Type')}
+                <View style={[styles.segmentContainer, { backgroundColor: theme.card, borderColor: theme.border, marginBottom: 16 }]}>
+                    {['password', 'uuid', 'certificate'].map((type) => {
+                        const isActive = formData.authType === type;
+                        return (
+                        <TouchableOpacity
+                            key={type}
+                            style={[
+                            styles.segmentBtn,
+                            isActive && { backgroundColor: theme.tint }
+                            ]}
+                            onPress={() => updateField('authType', type)}
+                        >
+                            <Text style={[
+                            styles.segmentText,
+                            { fontSize: 13, color: isActive ? '#fff' : theme.textSecondary, fontWeight: isActive ? '700' : '500' }
+                            ]}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
+                        </TouchableOpacity>
+                        );
+                    })}
+                </View>
+
+                <TextInput
+                    style={[
+                        styles.input,
+                        {
+                          backgroundColor: theme.card,
+                          color: theme.text,
+                          borderColor: theme.border,
+                          height: 50
+                        }
+                    ]}
+                    value={formData.authValue}
+                    placeholder={formData.authType === 'password' ? "Enter Password..." : "Enter Key/UUID..."}
+                    placeholderTextColor={theme.textSecondary}
+                    secureTextEntry={formData.authType === 'password'}
+                    onChangeText={(text) => updateField('authValue', text)}
+                />
+            </View>
         </View>
 
-        {/* --- TRANSPORT LAYER --- */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Transport Layer</Text>
-          <View style={styles.toggleRow}>
-            {['TCP', 'UDP'].map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.toggleBtn, 
-                  formData.transportLayer === type && styles.toggleBtnActive
-                ]}
-                onPress={() => updateField('transportLayer', type)}
-              >
-                <Text style={[
-                  styles.toggleText, 
-                  formData.transportLayer === type && styles.toggleTextActive
-                ]}>{type}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+        <View style={{ marginTop: 40 }}>
+            <TouchableOpacity
+                onPress={handleCreate}
+                activeOpacity={0.8}
+                style={[styles.primaryBtn, { backgroundColor: theme.tint, shadowColor: theme.tint }]}
+            >
+                <Text style={styles.primaryBtnText}>Create Connection</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+                onPress={() => router.back()}
+                style={styles.ghostBtn}
+            >
+                <Text style={[styles.ghostBtnText, { color: theme.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
         </View>
-
-        {/* --- SECURITY SECTION --- */}
-        <View style={styles.section}>
-          <View style={styles.switchRow}>
-            <Text style={styles.label}>Enable Obfuscation</Text>
-            <Switch 
-              value={formData.obfuscation}
-              onValueChange={(val) => updateField('obfuscation', val)}
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-              thumbColor={formData.obfuscation ? "#2f95dc" : "#f4f3f4"}
-            />
-          </View>
-
-          <Text style={styles.label}>Authentication Type</Text>
-          <View style={styles.toggleRow}>
-            {['password', 'uuid', 'certificate'].map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.toggleBtn, 
-                  formData.authType === type && styles.toggleBtnActive
-                ]}
-                onPress={() => updateField('authType', type)}
-              >
-                <Text style={[
-                  styles.toggleText, 
-                  formData.authType === type && styles.toggleTextActive
-                ]}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={styles.label}>Auth Value</Text>
-          <TextInput 
-            style={styles.input} 
-            value={formData.authValue}
-            placeholder={formData.authType === 'password' ? "Enter Password" : "Enter Key/UUID"}
-            secureTextEntry={formData.authType === 'password'}
-            onChangeText={(text) => updateField('authValue', text)}
-          />
-        </View>
-
-        {/* --- BUTTONS --- */}
-        <TouchableOpacity onPress={handleCreate} style={styles.createBtn}>
-          <Text style={styles.createBtnText}>Create Connection</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.back()} style={styles.cancelBtn}>
-          <Text style={styles.cancelBtnText}>Cancel</Text>
-        </TouchableOpacity>
 
       </ScrollView>
     </KeyboardAvoidingView>
@@ -275,116 +298,92 @@ export default function AddScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  headerTitle: { 
-    fontSize: 28, 
-    fontWeight: 'bold', 
-    color: '#333',
-    marginTop: 10
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   subHeader: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20
+    fontSize: 16,
+    marginTop: 4,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 10,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between'
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#555',
-    marginBottom: 6,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5
   },
   input: {
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
-    marginBottom: 5, // Reduced to make space for error text
-  },
-  // 4. NEW ERROR STYLES
-  inputError: {
-    borderColor: '#e74c3c',
-    borderWidth: 1,
-    backgroundColor: '#fff0f0'
   },
   errorText: {
-    color: '#e74c3c',
     fontSize: 12,
-    marginBottom: 10,
-    marginLeft: 2
+    marginTop: 6,
+    marginLeft: 4
   },
-  // ... (Toggle, Switch, and Button styles remain the same)
-  toggleRow: {
+  segmentContainer: {
     flexDirection: 'row',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    padding: 2,
-    marginBottom: 15
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
   },
-  toggleBtn: {
+  segmentBtn: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 6,
+    borderRadius: 8,
   },
-  toggleBtnActive: {
-    backgroundColor: 'white',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 2,
+  segmentText: {
+    fontSize: 14,
   },
-  toggleText: {
-    color: '#666',
-    fontWeight: '500'
-  },
-  toggleTextActive: {
-    color: '#2f95dc',
-    fontWeight: 'bold'
-  },
-  switchRow: {
+  switchCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
-    backgroundColor: '#f9f9f9',
-    padding: 10,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#eee'
   },
-  createBtn: { 
-    backgroundColor: '#4caf50', 
-    padding: 18, 
-    borderRadius: 12, 
+  switchTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  switchSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  primaryBtn: {
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
-    marginBottom: 10,
-    elevation: 3
+    marginBottom: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6
   },
-  createBtnText: { 
-    color: 'white', 
+  primaryBtnText: {
+    color: 'white',
     fontWeight: 'bold',
-    fontSize: 16 
+    fontSize: 17
   },
-  cancelBtn: { 
-    padding: 15, 
-    alignItems: 'center' 
+  ghostBtn: {
+    padding: 10,
+    alignItems: 'center'
   },
-  cancelBtnText: { 
-    color: '#e74c3c', 
-    fontWeight: '600' 
+  ghostBtnText: {
+    fontWeight: '600',
+    fontSize: 16
   }
 });
