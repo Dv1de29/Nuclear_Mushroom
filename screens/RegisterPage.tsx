@@ -11,6 +11,8 @@ import {
     View
 } from 'react-native';
 
+import NuclearModule from '../app/NuclearNative';
+
 export default function RegisterScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');

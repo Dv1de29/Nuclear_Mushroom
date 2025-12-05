@@ -11,6 +11,11 @@ import {
     View
 } from 'react-native';
 
+import NuclearModule from '../app/NuclearNative';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import usersData from '../assets/data/log.json';
+
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -23,12 +28,44 @@ export default function LoginScreen() {
       return;
     }
 
+    const fetchUser = async () => {
+        try{
+            const user = usersData.users.find(u => u.email === email);
+            
+            if ( !user ){
+                throw new Error("Wrong email")
+            }
+
+            if ( user.password !== password) {
+                throw new Error("Wrong password");
+            }
+
+            // 3. SAVE TO ASYNC STORAGE (localStorage doesn't exist)
+            await AsyncStorage.setItem('userRole', user.role);
+            await AsyncStorage.setItem('userName', user.name);
+
+            console.log("Login Success!");
+            router.replace('/(tabs)');
+        }
+        catch(e: any){
+            const errorMsg = e.message || "Unknown error";
+            if(NuclearModule) {
+                NuclearModule.logMessage(`Login Error: ${errorMsg}`);
+            }
+            Alert.alert("Login Failed", errorMsg);
+            
+            // Log to Android Studio
+        }
+    }
+
+    fetchUser()
+
     // 2. Mock Authentication Logic
     console.log("Logging in with:", email, password);
 
     // 3. Navigate to the Tabs
     // We use 'replace' instead of 'push' so the user can't swipe back to the login screen
-    router.replace('/(tabs)'); 
+    // router.replace('/(tabs)'); 
   };
 
   return (

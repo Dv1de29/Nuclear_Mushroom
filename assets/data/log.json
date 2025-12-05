@@ -1,0 +1,16 @@
+{
+  "users": [
+    {
+      "role": "user",
+      "name": "User Cosmin",
+      "email": "user@test.com",
+      "password": "user"
+    },
+    {
+      "role": "admin",
+      "name": "User Octav",
+      "email": "admin@test.com",
+      "password": "admin"
+    }
+  ]
+}
