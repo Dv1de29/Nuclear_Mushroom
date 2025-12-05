@@ -13,12 +13,17 @@ import {
     View,
 } from 'react-native';
 
+import ConnectionData from '@/assets/data/connections.json';
+
+import { ConnectionProfile } from '@/constants/types';
 
 interface ItemType {
     id: string,
     title: string,
     status: boolean,
 }
+
+const connections: ConnectionProfile[] = ConnectionData as ConnectionProfile[];;
 
 const MOCK_ITEMS: ItemType[] = Array.from({ length: 15 }, (_, i) => ({
     id: i.toString(),
@@ -29,7 +34,7 @@ const MOCK_ITEMS: ItemType[] = Array.from({ length: 15 }, (_, i) => ({
 export default function HomePage() {
     const router = useRouter();
     const [userName, setUserName] = useState("Guest");
-    const [items, setItems] = useState<ItemType[]>(MOCK_ITEMS)
+    const [items, setItems] = useState<ConnectionProfile[]>(connections)
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
 
     // Removed the useRef since we don't need it with the new logic
@@ -66,11 +71,11 @@ export default function HomePage() {
         router.replace('/(auth)/login');
     };
 
-    const handleItemPress = (item: ItemType) => {
+    const handleItemPress = (item: ConnectionProfile) => {
         setSelectedItemId(item.id);
     };
 
-    const renderItem = ({ item }: { item: ItemType }) => (
+    const renderItem = ({ item }: { item: ConnectionProfile }) => (
         <TouchableOpacity
             style={[
                 styles.itemRow,
@@ -79,7 +84,7 @@ export default function HomePage() {
             ]}
             onPress={() => { handleItemPress(item) }}
         >
-            <Text style={styles.itemText}>{item.title}</Text>
+            <Text style={styles.itemText}>{item.name}</Text>
             <View style={[
                 styles.statusBadge,
                 { backgroundColor: item.status ? '#4caf50' : '#e74c3c' }

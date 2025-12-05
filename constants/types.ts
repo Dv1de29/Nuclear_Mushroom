@@ -9,5 +9,5 @@ export interface ConnectionProfile {
   authType: 'password' | 'uuid' | 'certificate'; // Required by Section 2 (Autentificare)
   authValue: string;      // The actual password or UUID
   obfuscation: boolean;   // Required by Section 2 (Obfuscare)
-  status: 'connected' | 'disconnected' | 'error'; // Required by Section 1 (Status conectivitate)
+  status: boolean // Required by Section 1 (Status conectivitate)
 }

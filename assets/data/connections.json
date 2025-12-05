@@ -10,7 +10,7 @@
     "authType": "password",
     "authValue": "UserPass123!",
     "obfuscation": false,
-    "status": "disconnected"
+    "status": false
   },
   {
     "id": "2",
@@ -23,7 +23,7 @@
     "authType": "uuid",
     "authValue": "550e8400-e29b-41d4-a716-446655440000",
     "obfuscation": false,
-    "status": "connected"
+    "status": true
   },
   {
     "id": "3",
@@ -36,7 +36,7 @@
     "authType": "certificate",
     "authValue": "-----BEGIN CERTIFICATE-----MIIDlzCCRn+gAwIBAgIE...",
     "obfuscation": true,
-    "status": "disconnected"
+    "status": false
   },
   {
     "id": "4",
@@ -49,7 +49,7 @@
     "authType": "password",
     "authValue": "SecureShellPass",
     "obfuscation": true,
-    "status": "error"
+    "status": false
   },
   {
     "id": "5",
@@ -62,6 +62,6 @@
     "authType": "uuid",
     "authValue": "a2c3d4e5-f6g7-8h9i-0j1k-2l3m4n5o6p7q",
     "obfuscation": false,
-    "status": "disconnected"
+    "status": false
   }
 ]

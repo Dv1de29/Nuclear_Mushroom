@@ -14,6 +14,10 @@ import {
     View
 } from 'react-native';
 
+import ConnectionData from '@/assets/data/connections.json';
+
+import { ConnectionProfile } from '@/constants/types';
+
 interface ItemType {
     id: string,
     title: string,
@@ -26,10 +30,12 @@ const MOCK_ITEMS: ItemType[] = Array.from({ length: 15 }, (_, i) => ({
     status: false
 }));
 
+const connections: ConnectionProfile[] = ConnectionData as ConnectionProfile[];
+
 export default function AdminScreen() {
     const router = useRouter();
     const [userName, setUserName] = useState("Admin");
-    const [items, setItems] = useState<ItemType[]>(MOCK_ITEMS);
+    const [items, setItems] = useState<ConnectionProfile[]>(connections);
 
     // 1. STATE: Track which item is currently expanded (showing the menu)
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -85,7 +91,7 @@ export default function AdminScreen() {
         router.replace('/(auth)/login');
     };
 
-    const renderItem = ({ item }: { item: ItemType }) => {
+    const renderItem = ({ item }: { item: ConnectionProfile }) => {
         const isExpanded = expandedId === item.id;
 
         return (
@@ -99,7 +105,7 @@ export default function AdminScreen() {
                     onPress={() => handleExpandToggle(item.id)}
                     activeOpacity={0.7}
                 >
-                    <Text style={styles.itemText}>{item.title}</Text>
+                    <Text style={styles.itemText}>{item.name}</Text>
                     
                     {/* Status Badge - Clicking this toggles status directly */}
                     {/* <TouchableOpacity onPress={() => handleToggleStatus(item.id)}>
